@@ -1,0 +1,54 @@
+{
+  "name": "everywatch-scraper",
+  "version": "1.0.0",
+  "description": "Offline-capable EveryWatch scraping tool with GUI",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "node server.js",
+    "build-electron": "electron-builder",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "playwright": "^1.52.0",
+    "recharts": "^2.15.3"
+  },
+  "devDependencies": {
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.everywatch.scraper",
+    "productName": "Everywatch Scraper",
+    "asar": false,
+    "directories": {
+      "buildResources": "build",
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron-main.js",
+      "server.js",
+      "scrapeEverywatch.js",
+      "results.json",
+      "captcha-flag.txt",
+      "captcha-session.json",
+      "everywatch-client/dist/**/*",
+      "public/**/*",
+      "node_modules/**/*",
+      "playwright-browsers/**/*",
+      "embedded-node/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

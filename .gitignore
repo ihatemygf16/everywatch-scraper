@@ -1,0 +1,26 @@
+# Build output
+/dist-electron
+/everywatch-client/dist
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Node and Playwright
+node_modules
+playwright-browsers
+embedded-node
+
+# Logs and local flags
+*.log
+*.lock
+*.json
+!package.json
+!package-lock.json
+captcha-flag.txt
+captcha-session.json
+results.json
+
+# IDE/editor configs
+.vscode
+.idea

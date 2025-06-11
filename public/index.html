@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>EveryWatch Scraper</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    label, select, input {
+      margin: 10px 0;
+      display: block;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #aaa;
+      padding: 5px;
+      text-align: left;
+    }
+    .filters {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    #captchaButton {
+      margin-top: 20px;
+      padding: 8px 16px;
+    }
+    .sortable {
+      cursor: pointer;
+    }
+    .sortable::after {
+      content: ' ▲▼';
+      font-size: 10px;
+      opacity: 0.4;
+    }
+  </style>
+</head>
+<body>
+  <h1>EveryWatch Scraper</h1>
+  <form id="scrapeForm">
+    <label for="searchQuery">Search Query:</label>
+    <input type="text" id="searchQuery" name="searchQuery" required>
+
+    <label for="lookbackDays">Lookback Days:</label>
+    <input type="number" id="lookbackDays" name="lookbackDays" required>
+
+    <button type="submit">Scrape</button>
+  </form>
+
+  <button id="captchaButton">CAPTCHA Solved</button>
+
+  <div class="filters">
+    <div>
+      <label for="boxPapersFilter">Box/Papers:</label>
+      <select id="boxPapersFilter">
+        <option value="all">All</option>
+        <option value="boxOnly">Box Only</option>
+        <option value="papersOnly">Papers Only</option>
+        <option value="both">Both</option>
+        <option value="neither">Neither</option>
+      </select>
+    </div>
+    <div>
+      <label for="countryFilter">Country:</label>
+      <select id="countryFilter">
+        <option value="all">All</option>
+        <option value="usOnly">US Only</option>
+        <option value="excludeJapan">Exclude Japan</option>
+      </select>
+    </div>
+  </div>
+
+  <table id="resultsTable">
+    <thead>
+      <tr>
+        <th data-key="Brand" class="sortable">Brand</th>
+        <th data-key="Model" class="sortable">Model</th>
+        <th data-key="Reference" class="sortable">Reference</th>
+        <th data-key="Price" class="sortable">Price</th>
+        <th data-key="Seller" class="sortable">Seller</th>
+        <th data-key="Country" class="sortable">Country</th>
+        <th data-key="LastSeenDate" class="sortable">Last Seen Date</th>
+        <th data-key="Box" class="sortable">Box</th>
+        <th data-key="Papers" class="sortable">Papers</th>
+        <th data-key="ListedFor" class="sortable">Listed For</th>
+        <th>Link</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script src="/frontend.js"></script>
+</body>
+</html>
