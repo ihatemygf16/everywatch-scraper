@@ -1,6 +1,6 @@
 {
   "name": "everywatch-scraper",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Offline-capable EveryWatch scraping tool with GUI",
   "main": "electron-main.js",
   "scripts": {

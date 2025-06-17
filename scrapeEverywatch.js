@@ -55,6 +55,9 @@ async function scrapeEverywatch(
       const popup = document.querySelector('div.general-popup-outer.ew-paywall-outer');
       if (popup) popup.remove();
 
+      const popular = document.querySelector('div.ew-popular-section');
+      if (popular) popular.remove();
+
       const body = document.body;
       if (body) {
         body.style.overflow = 'auto';
