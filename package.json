@@ -1,6 +1,6 @@
 {
   "name": "everywatch-scraper",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Offline-capable EveryWatch scraping tool with GUI",
   "main": "electron-main.js",
   "scripts": {
@@ -39,6 +39,7 @@
       "captcha-session.json",
       "everywatch-client/dist/**/*",
       "public/**/*",
+      "package.json",
       "node_modules/**/*",
       "playwright-browsers/**/*",
       "embedded-node/**/*"

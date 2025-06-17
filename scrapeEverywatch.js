@@ -9,9 +9,23 @@ function parseLastSeenDate(text) {
 async function waitForCaptchaSignal(isCaptchaSolvedFn) {
   console.log('[WAIT] Waiting for captcha solved signal...');
   while (!isCaptchaSolvedFn()) {
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 2000));
   }
   console.log('[WAIT] Captcha solve confirmed. Continuing...');
+}
+
+async function checkAndWaitForCaptcha(page, isCaptchaSolvedFn) {
+  const hasRecaptcha = await page.$('iframe[title="reCAPTCHA"]');
+  const hasCollectorsMessage = await page.evaluate(() => {
+    return !!Array.from(document.querySelectorAll('body *'))
+      .some(el => el.textContent?.toLowerCase().includes("only collectors beyond this point"));
+  });
+
+  if (hasRecaptcha || hasCollectorsMessage) {
+    console.log('[CAPTCHA] Detected – waiting for user to solve...');
+    await waitForCaptchaSignal(isCaptchaSolvedFn);
+    await page.waitForSelector('.price, .ew-tab-option', { timeout: 15000 });
+  }
 }
 
 async function scrapeEverywatch(
@@ -55,13 +69,14 @@ async function scrapeEverywatch(
 
   sendStepFn(2);
   await page.goto('https://everywatch.com/');
-  await page.waitForTimeout(3000);
+  await page.waitForSelector('input[placeholder*="Search over"]');
 
   async function checkCaptchaAtStart() {
     const captcha = await page.$('iframe[title="reCAPTCHA"]');
     if (captcha) {
       console.log('[CAPTCHA] Detected - waiting for manual solve');
       await waitForCaptchaSignal(isCaptchaSolvedFn);
+      await page.waitForTimeout(3000); // static wait like before
     }
   }
 
@@ -96,10 +111,13 @@ async function scrapeEverywatch(
   async function performSearch(type, initial = false, skipClick = false) {
     if (type === 'Historical' && !skipClick) {
       await page.click('.ew-select-dropdown__control');
-      await page.waitForTimeout(500);
-      await page.click('text=Historical');
+      await page.waitForSelector('.ew-tab-option-label:text("Historical")', { timeout: 5000 });
+      
+      const tab = await page.locator('.ew-tab-option-label', { hasText: 'Historical' });
+      await tab.click();
+      await page.waitForTimeout(300); // give dropdown time to close
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(3000); // let it reload naturally
     }
 
     const suffix =
@@ -115,7 +133,8 @@ async function scrapeEverywatch(
       }
     }, suffix);
 
-    await page.reload();
+    await page.reload({ waitUntil: 'domcontentloaded' });
+
     await page.waitForSelector('a.ew-grid-item.ew-grid-watch-card', { timeout: 10000 });
 
     return await page.evaluate(({ lookbackDays, nowISO, isHist }) => {
@@ -166,6 +185,8 @@ async function scrapeEverywatch(
     if (active !== 'historical') await performSearch('Historical');
     histLinks = await performSearch('Historical', false, true);
   }
+
+  const allLinks = [...availLinks, ...histLinks];
 
   sendStepFn(4);
 
@@ -251,7 +272,10 @@ async function scrapeEverywatch(
         await page.goto(`https://everywatch.com${url}`, {
           waitUntil: 'domcontentloaded',
         });
-        await page.waitForSelector('.price', { timeout: 5000 });
+
+        await checkAndWaitForCaptcha(page, isCaptchaSolvedFn);
+
+        await page.waitForSelector('.price, .awd-desc-items', { timeout: 10000 });
 
         const isChrono24 = await page.evaluate(() => {
           const label = Array.from(document.querySelectorAll('.awd-desc-items')).find((el) =>
@@ -310,6 +334,14 @@ async function scrapeEverywatch(
 
   if (availLinks.length) await scrapeListings(availLinks, 'Available');
   if (histLinks.length) await scrapeListings(histLinks, 'Historical');
+
+  const scrapedUrls = new Set(results.map(r => new URL(r.URL).pathname));
+  const missingUrls = allLinks.filter(u => !scrapedUrls.has(new URL(`https://everywatch.com${u}`).pathname));
+
+  if (missingUrls.length > 0) {
+    console.log(`[RETRY] ${missingUrls.length} listings skipped. Retrying once...`);
+    await scrapeListings(missingUrls, 'Retry');
+  }
 
   sendStepFn(5);
   fs.writeFileSync(path.join(__dirname, 'results.json'), JSON.stringify(results, null, 2));

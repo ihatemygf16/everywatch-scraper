@@ -118,6 +118,28 @@ export default function App() {
     );
   };
 
+  const handleDelete = async (url) => {
+    try {
+      console.log('[CLIENT] Deleting:', url);
+      const res = await fetch('http://localhost:3001/delete-listing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!res.ok) {
+        console.error("Failed to delete listing");
+        return;
+      }
+
+      setResults(prev => prev.filter(item => item.URL !== url));
+    } catch (err) {
+      console.error("Error deleting listing:", err);
+    }
+  };
+
   const parseSortableValue = (key, value) => {
     if (key === "Price") {
       const m = value.replace(/,/g, "").match(/\d+(\.\d+)?/);
@@ -163,12 +185,25 @@ export default function App() {
 
       let conditionMatch = true;
       if (conditionFilter.length > 0) {
+        const conditionRaw = row.Condition?.toLowerCase() || "";
+
+        let extracted = "";
+        const match = conditionRaw.match(/\((.*?)\)/i);
+        if (match) {
+          extracted = match[1].trim();
+        } else {
+          extracted = conditionRaw.split(/[\s&]+/).slice(0, 2).join(" ").trim();
+        }
+        
         conditionMatch = conditionFilter.some((c) => {
-          if (c === "Fair") return condition.includes("fair");
-          if (c === "Good") return condition.includes("good");
-          if (c === "Very Good") return condition.includes("very good");
-          if (c === "Like New") return condition.includes("like new") || condition.includes("unworn");
-          return false;
+          const norm = c.toLowerCase();
+          if (norm === "like new") {
+            return extracted.includes("like new") || extracted.includes("unworn");
+          }
+          return (
+            extracted === norm ||
+            (extracted.includes(norm) && !extracted.includes("very"))
+          );
         });
       }
 
@@ -207,6 +242,12 @@ export default function App() {
       : sorted[mid];
   };
 
+  const standardDeviation = (arr) => { 
+    const mean = arr.reduce((acc, val) => acc + val, 0) / arr.length;
+    const variance = arr.reduce((acc, val) => acc + (val - mean) ** 2, 0) / arr.length;
+    return Math.sqrt(variance);
+  };
+
   const formatPrice = (num) =>
     typeof num === "number" ? `$${num.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—";
 
@@ -214,6 +255,8 @@ export default function App() {
   const minPrice = prices.length ? Math.min(...prices) : null;
   const maxPrice = prices.length ? Math.max(...prices) : null;
   const medianDaysListed = listedDays.length ? median(listedDays) : "—";
+  const priceStdDev = prices.length ? standardDeviation(prices) : null;
+  const daysStdDev = listedDays.length ? standardDeviation(listedDays) : null;
   const now = new Date();
   const nowTime = now.getTime();
 
@@ -258,13 +301,15 @@ export default function App() {
     ? Math.max(...listedDaysVsPricePoints.map((p) => p.x)) + 1
     : 30;
 
-  const CustomTooltip = ({ active, payload }) => {
+  const CustomTooltip = ({ active, payload, label, formatter }) => {
     if (active && payload && payload.length > 0) {
       const p = payload[0].payload;
+      const labelFormatted = formatter ? formatter(p.x) : p.x;
+
       return (
         <div className="bg-white text-black p-2 border rounded shadow text-sm w-48">
           <div className="font-medium mb-1">
-            {new Date(p.x).toLocaleDateString()} – ${p.y}
+            {labelFormatted} – ${p.y}
           </div>
           {p.image && (
             <img
@@ -481,8 +526,16 @@ export default function App() {
                     reader.onload = (event) => {
                       try {
                         const parsed = JSON.parse(event.target.result);
-                        if (Array.isArray(parsed)) setResults(parsed);
-                        else throw new Error("File format is invalid.");
+                        if (Array.isArray(parsed)) {
+                          setResults(parsed);
+                          fetch('http://localhost:3001/import-results', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(parsed),
+                          });
+                        } else {
+                          throw new Error("File format is invalid.");
+                        }
                       } catch (err) {
                         alert("Failed to import file: " + err.message);
                       }
@@ -504,10 +557,24 @@ export default function App() {
         </button>
         <div className="flex flex-nowrap justify-between gap-4 mt-6 overflow-x-auto">
         <StatBox label="Listings Loaded" value={filteredResults.length} />
-        <StatBox label="Median Price" value={formatPrice(medianPrice)} />
+        <StatBox
+          label="Median Price"
+          value={
+            medianPrice !== null && priceStdDev !== null
+              ? `${formatPrice(medianPrice)}±${formatPrice(priceStdDev)}`
+              : "—"
+          }
+        />
         <StatBox label="Min Price" value={formatPrice(minPrice)} />
         <StatBox label="Max Price" value={formatPrice(maxPrice)} />
-        <StatBox label="Median Days Listed" value={medianDaysListed} />
+        <StatBox
+          label="Median Days Listed"
+          value={
+            typeof medianDaysListed === "number" && daysStdDev !== null
+              ? `${medianDaysListed.toFixed(1)}±${daysStdDev.toFixed(2)}`
+              : "—"
+          }
+        />
       </div>
         <div className="mt-6">
           <StepLoader loading={loading} messages={stepMessages} index={stepIndex} />
@@ -532,7 +599,7 @@ export default function App() {
                         stroke="#F9FAFA"
                       />
                       <YAxis dataKey="y" stroke="#F9FAFA" />
-                      <Tooltip content={<CustomTooltip />} />
+                      <Tooltip content={<CustomTooltip formatter={(x) => new Date(x).toLocaleDateString()} />} />
                       <Scatter
                         name="Historical"
                         data={historicalPoints}
@@ -574,7 +641,7 @@ export default function App() {
                         stroke="#F9FAFA"
                       />
                       <YAxis dataKey="y" stroke="#F9FAFA" />
-                      <Tooltip content={<CustomTooltip />} />
+                      <Tooltip content={<CustomTooltip formatter={(x) => `${x} days`} />} />
                       <Scatter
                         name="Available"
                         data={availableDaysVsPricePoints}
@@ -618,6 +685,7 @@ export default function App() {
                     </th>
                   ))}
                   <th className="border border-[#6B727D] px-2 py-1">Link</th>
+                  <th className="border border-[#6B727D] px-2 py-1">Delete</th>
                 </tr>
               </thead>
               <tbody>
@@ -639,6 +707,14 @@ export default function App() {
                         Link
                       </a>
                     </td>
+                    <td className="border border-[#6B727D] px-2 py-1">
+                      <button
+                        onClick={() => handleDelete(row.URL)}
+                        className="text-red-400 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -646,7 +722,11 @@ export default function App() {
           </div>
         )}
       </div>
-      <WatchModal watch={activeWatch} onClose={() => setActiveWatch(null)} />
+      <WatchModal
+        watch={activeWatch}
+        onClose={() => setActiveWatch(null)}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }

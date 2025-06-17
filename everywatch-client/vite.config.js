@@ -10,4 +10,16 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  server: {
+    proxy: {
+      '/delete-listing': 'http://localhost:3001',
+      '/scrape': 'http://localhost:3001',
+      '/captcha-done': 'http://localhost:3001',
+      '/scrape-stream': {
+        target: 'http://localhost:3001',
+        ws: true,
+        changeOrigin: true,
+      }
+    }
+  }
 });

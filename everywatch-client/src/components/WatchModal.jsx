@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
-export function WatchModal({ watch, onClose }) {
+export function WatchModal({ watch, onClose, onDelete }) {
   const ref = useRef(null);
   const id = useId();
 
@@ -52,23 +52,38 @@ export function WatchModal({ watch, onClose }) {
             <h2 className="text-xl font-bold">{watch.Brand} – {watch.Model}</h2>
             <p className="text-sm text-[#CBD5E1]">{watch.Reference}</p>
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><strong>Price:</strong> {watch.Price}</div>
-              <div><strong>Condition:</strong> {watch.Condition}</div>
-              <div><strong>Box:</strong> {watch.Box}</div>
-              <div><strong>Papers:</strong> {watch.Papers}</div>
-              <div><strong>Seller:</strong> {watch.Seller}</div>
-              <div><strong>Country:</strong> {watch.Country}</div>
-              <div><strong>Listed For:</strong> {watch.ListedFor}</div>
-              <div><strong>Last Seen:</strong> {watch.LastSeenDate}</div>
+              <div>
+                <div><strong>Price:</strong> {watch.Price}</div>
+                <div><strong>Box:</strong> {watch.Box}</div>
+                <div><strong>Seller:</strong> {watch.Seller}</div>
+                <div><strong>Listed For:</strong> {watch.ListedFor}</div>
+                <a
+                  href={watch.URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-4 text-[#6366F1] underline"
+                >
+                  View Listing
+                </a>
+              </div>
+              <div>
+                <div><strong>Condition:</strong> {watch.Condition}</div>
+                <div><strong>Papers:</strong> {watch.Papers}</div>
+                <div><strong>Country:</strong> {watch.Country}</div>
+                <div><strong>Last Seen:</strong> {watch.LastSeenDate}</div>
+                {onDelete && (
+                  <button
+                    onClick={() => {
+                      onDelete(watch.URL);
+                      onClose();
+                    }}
+                    className="mt-4 inline-block text-red-400 hover:underline"
+                  >
+                    Delete Listing
+                  </button>
+                )}
+              </div>
             </div>
-            <a
-              href={watch.URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block mt-4 text-[#6366F1] underline"
-            >
-              View Listing
-            </a>
             <button
               onClick={onClose}
               className="absolute top-4 right-4 bg-[#111827] text-[#F9FAFA] p-2 rounded-full hover:bg-[#1f2937]"
